@@ -31,26 +31,55 @@ This token allows the script to read your PRs and trigger re-runs on your behalf
 5.  **Value**: Paste your PAT from Step 1.
 6.  Click **Add secret**.
 
-### 3. 🎛️ Create Repository Variable (The Switch)
+### 3. 🎛️ Create Repository Variables
 
-This variable acts as a "master switch" for the 15-minute scheduled runs.
+These variables control the bot's behavior.
 
 1.  Go to this repository's **Settings** tab.
 2.  In the left sidebar, click **Secrets and variables** → **Actions**.
 3.  Click the **Variables** tab, then click **New repository variable**.
-4.  **Name**: `ENABLE_SCHEDULED_RETRY`
-5.  **Value**: `true` (to enable) or `false` (to disable).
-6.  Click **Add variable**.
 
-**Note**: If this variable is set to `false` or does not exist, the scheduled runs will be disabled. Manual runs via the Actions tab will **always** work regardless of this variable's state.
+#### Required Variables:
+
+**`MY_USERNAME`**
+-   **Value**: Your GitHub username (e.g., `zesonzhang`)
+-   **Purpose**: Identifies which PRs to monitor and retry
+
+**`TARGET_REPOS`**
+-   **Value**: JSON array of repositories to monitor (e.g., `["openthread/ot-br-posix", "openthread/openthread"]`)
+-   **Purpose**: Specifies which repositories to check for failed PRs
+-   **Note**: This variable is required for the workflow to run
+
+**`ENABLE_SCHEDULED_RETRY`**
+-   **Value**: `true` (to enable) or `false` (to disable)
+-   **Purpose**: Acts as a "master switch" for the 15-minute scheduled runs
+
+**Note**: If `ENABLE_SCHEDULED_RETRY` is set to `false` or does not exist, the scheduled runs will be disabled. Manual runs via the Actions tab will **always** work regardless of this variable's state.
 
 ## Configuration
 
 Edit `.github/workflows/retry-failed-prs.yml` to customize:
 
--   `MY_USERNAME`: Your GitHub username (default: `zesonzhang`)
--   `TARGET_REPO`: The repository to monitor (default: `openthread/ot-br-posix`)
--   `schedule.cron`: Frequency of checks (default: every 15 minutes)
+-   **`schedule.cron`**: Frequency of checks (default: every 15 minutes)
+
+Set repository variables to configure:
+
+-   `MY_USERNAME`: Your GitHub username (required)
+-   `TARGET_REPOS`: JSON array of repositories to monitor (required)
+-   `ENABLE_SCHEDULED_RETRY`: Enable/disable scheduled runs (`true` or `false`)
+
+### Adding or Changing Repositories
+
+To monitor different repositories, update the `TARGET_REPOS` repository variable:
+
+1.  Go to **Settings** → **Secrets and variables** → **Actions** → **Variables** tab
+2.  Edit the `TARGET_REPOS` variable
+3.  Set the value as a **JSON array**, for example:
+    ```json
+    ["openthread/ot-br-posix", "openthread/openthread", "openthread/ot-commissioner"]
+    ```
+
+**Important**: The value must be valid JSON format with double quotes around repository names.
 
 ## Usage
 

@@ -1,4 +1,4 @@
-name: Retry Failed OpenThread PRs
+name: Retry Failed GitHub PRs
 
 # Triggers
 on:
@@ -10,8 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  MY_USERNAME: "zesonzhang" 
-  TARGET_REPO: "openthread/ot-br-posix"
+  MY_USERNAME: ${{ vars.MY_USERNAME }}
 
 jobs:
   check-and-retry:
@@ -23,10 +22,18 @@ jobs:
     # 2. Scheduled trigger AND the ENABLE_SCHEDULED_RETRY variable is 'true'
     if: (github.event_name == 'workflow_dispatch') || (vars.ENABLE_SCHEDULED_RETRY == 'true')
     
+    # Matrix strategy: each repository runs as a separate parallel job
+    # Repositories are configured via the TARGET_REPOS variable (JSON array format)
+    strategy:
+      matrix:
+        repo: ${{ fromJSON(vars.TARGET_REPOS) }}
+      fail-fast: false  # Continue checking other repos even if one fails
+    
     steps:
       - name: Check and Retry Failed PRs
         env:
           GH_TOKEN: ${{ secrets.MY_PAT }}
+          TARGET_REPO: ${{ matrix.repo }}
         run: |
           echo "Checking for failed PRs by '$MY_USERNAME' in '$TARGET_REPO'..."
 
