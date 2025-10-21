@@ -16,8 +16,8 @@ This token allows the script to read your PRs and trigger re-runs on your behalf
 
 1.  Go to **https://github.com/settings/personal-access-tokens/new** to create a new fine-grained token.
 2.  Give it a **Token name** (e.g., `pr_retry_bot`).
-3.  Set an **Expiration** (e.g., 90 days or 1 year max).
-4.  Under **Repository access**, select **"Only select repositories"** and choose the repositories you want to monitor (the ones listed in your `TARGET_REPOS` variable).
+3.  Set an **Expiration** (e.g., 90 days).
+4.  Under **Repository access**, select the repositories you want to monitor.
 5.  Under **Permissions** → **Repository permissions**, set:
     -   **Actions**: Read and write ✅ (Required to re-run workflows)
     -   **Pull requests**: Read ✅ (Required to list and check PR status)
