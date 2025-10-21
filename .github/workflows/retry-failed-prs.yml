@@ -1,0 +1,51 @@
+name: Retry Failed OpenThread PRs
+
+# Triggers
+on:
+  # 1. Scheduled trigger: runs every 15 minutes
+  schedule:
+    - cron: '*/15 * * * *'
+  
+  # 2. Manual trigger: allows you to click "Run workflow" in Actions tab
+  workflow_dispatch:
+
+env:
+  MY_USERNAME: "zesonzhang" 
+  TARGET_REPO: "openthread/ot-br-posix"
+
+jobs:
+  check-and-retry:
+    runs-on: ubuntu-latest
+    
+    # Key "switch" logic
+    # Only runs in two cases:
+    # 1. Manual trigger (workflow_dispatch)
+    # 2. Scheduled trigger AND the ENABLE_SCHEDULED_RETRY variable is 'true'
+    if: (github.event_name == 'workflow_dispatch') || (vars.ENABLE_SCHEDULED_RETRY == 'true')
+    
+    steps:
+      - name: Check and Retry Failed PRs
+        env:
+          GH_TOKEN: ${{ secrets.MY_PAT }}
+        run: |
+          echo "Checking for failed PRs by '$MY_USERNAME' in '$TARGET_REPO'..."
+
+          # 1. Find all open PRs with failed checks
+          gh pr list --repo $TARGET_REPO --author $MY_USERNAME --state open --json number,headRefOid,statusCheckRollup \
+            --jq '.[] | select(.statusCheckRollup[].state == "FAILURE") | "\(.number) \(.headRefOid)"' | \
+          while read -r pr_number pr_sha; do
+            echo "PR #$pr_number (SHA: $pr_sha) has failed checks."
+
+            # 2. Find the failed Run ID for this PR + SHA
+            run_id=$(gh run list --repo $TARGET_REPO --head-sha $pr_sha --status failure --limit 1 --json databaseId -q '.[0].databaseId')
+
+            if [ -n "$run_id" ]; then
+              echo "Found failed Run ID: $run_id. Attempting to re-run failed jobs..."
+              # 3. Trigger retry (only failed jobs)
+              gh run rerun $run_id --failed --repo $TARGET_REPO
+              echo "Triggered retry for Run ID $run_id"
+            else
+              echo "Could not find a specific failed run for PR #$pr_number at SHA $pr_sha to retry."
+            fi
+          done
+          echo "Check complete."
