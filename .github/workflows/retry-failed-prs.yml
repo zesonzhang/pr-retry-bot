@@ -35,24 +35,92 @@ jobs:
           GH_TOKEN: ${{ secrets.MY_PAT }}
           TARGET_REPO: ${{ matrix.repo }}
         run: |
-          echo "Checking for failed PRs by '$MY_USERNAME' in '$TARGET_REPO'..."
+          set -euo pipefail
+          
+          echo "==============================================="
+          echo "Checking repository: $TARGET_REPO"
+          echo "Author: $MY_USERNAME"
+          echo "==============================================="
+          echo ""
 
-          # 1. Find all open PRs with failed checks
-          gh pr list --repo $TARGET_REPO --author $MY_USERNAME --state open --json number,headRefOid,statusCheckRollup \
-            --jq '.[] | select(.statusCheckRollup[].state == "FAILURE") | "\(.number) \(.headRefOid)"' | \
-          while read -r pr_number pr_sha; do
-            echo "PR #$pr_number (SHA: $pr_sha) has failed checks."
+          # 1. Get all open PRs by the user
+          echo "📋 Fetching all open PRs by '$MY_USERNAME'..."
+          all_prs=$(gh pr list --repo "$TARGET_REPO" --author "$MY_USERNAME" --state open --json number,title,headRefOid,url,statusCheckRollup,createdAt,updatedAt)
+          
+          pr_count=$(echo "$all_prs" | jq 'length')
+          echo "Found $pr_count open PR(s)"
+          echo ""
 
-            # 2. Find the failed Run ID for this PR + SHA
-            run_id=$(gh run list --repo $TARGET_REPO --head-sha $pr_sha --status failure --limit 1 --json databaseId -q '.[0].databaseId')
+          if [ "$pr_count" -eq 0 ]; then
+            echo "No open PRs found for user '$MY_USERNAME' in '$TARGET_REPO'"
+            exit 0
+          fi
 
-            if [ -n "$run_id" ]; then
-              echo "Found failed Run ID: $run_id. Attempting to re-run failed jobs..."
-              # 3. Trigger retry (only failed jobs)
-              gh run rerun $run_id --failed --repo $TARGET_REPO
-              echo "Triggered retry for Run ID $run_id"
-            else
-              echo "Could not find a specific failed run for PR #$pr_number at SHA $pr_sha to retry."
-            fi
-          done
-          echo "Check complete."
+          # 2. Display detailed information for each PR
+          echo "$all_prs" | jq -r '.[] | 
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+            "PR #\(.number): \(.title)\n" +
+            "URL: \(.url)\n" +
+            "SHA: \(.headRefOid)\n" +
+            "Created: \(.createdAt)\n" +
+            "Updated: \(.updatedAt)\n" +
+            "Status Checks: \(
+              if (.statusCheckRollup // []) | length == 0 then
+                "No checks configured"
+              else
+                .statusCheckRollup | group_by(.state) | 
+                map("\(.length) \(.[0].state)") | join(", ")
+              end
+            )\n"'
+
+          # 3. Find PRs with failed checks and retry them
+          echo ""
+          echo "🔍 Looking for PRs with failed checks to retry..."
+          echo ""
+
+          failed_prs=$(echo "$all_prs" | jq -r '.[] | select(.statusCheckRollup[]? | .state == "FAILURE") | "\(.number)|\(.headRefOid)|\(.title)"' || true)
+          
+          if [ -z "$failed_prs" ]; then
+            echo "✅ No PRs with failed checks found"
+          else
+            echo "$failed_prs" | while IFS='|' read -r pr_number pr_sha pr_title; do
+              echo "🔴 PR #$pr_number has failed checks"
+              echo "   Title: $pr_title"
+              echo "   SHA: $pr_sha"
+
+              # 4. Find the failed Run ID for this PR + SHA
+              run_info=$(gh run list --repo "$TARGET_REPO" --head-sha "$pr_sha" --status failure --limit 1 --json databaseId,workflowName -q '.[0] | select(. != null) | "\(.databaseId)|\(.workflowName)"' 2>/dev/null || true)
+
+              if [ -n "$run_info" ] && [ "$run_info" != "null" ]; then
+                run_db_id=$(echo "$run_info" | cut -d'|' -f1)
+                workflow_name=$(echo "$run_info" | cut -d'|' -f2-)
+                
+                if [ -n "$run_db_id" ] && [ "$run_db_id" != "null" ]; then
+                  echo "   Found failed workflow: $workflow_name (Run ID: $run_db_id)"
+                  echo "   🔄 Attempting to re-run failed jobs..."
+                  
+                  # 5. Trigger retry (only failed jobs)
+                  set +e
+                  gh run rerun "$run_db_id" --failed --repo "$TARGET_REPO" 2>&1
+                  retry_result=$?
+                  set -e
+                  
+                  if [ $retry_result -eq 0 ]; then
+                    echo "   ✅ Successfully triggered retry for Run ID $run_db_id"
+                  else
+                    echo "   ❌ Failed to trigger retry for Run ID $run_db_id (exit code: $retry_result)"
+                  fi
+                else
+                  echo "   ⚠️  Could not extract valid run ID"
+                fi
+              else
+                echo "   ⚠️  Could not find a specific failed run to retry"
+              fi
+              echo ""
+            done
+          fi
+
+          echo ""
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Check complete for repository: $TARGET_REPO"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
