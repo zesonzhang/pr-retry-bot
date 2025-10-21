@@ -14,16 +14,15 @@ Automated bot to periodically check and retry failed PR checks in target reposit
 
 This token allows the script to read your PRs and trigger re-runs on your behalf.
 
-1.  Go to **GitHub Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens**.
-2.  Click **"Generate new token"**.
-3.  Give it a **Token name** (e.g., `pr_retry_bot`).
-4.  Set an **Expiration** (e.g., 90 days or 1 year max).
-5.  Under **Repository access**, select **"Only select repositories"** and choose the repositories you want to monitor (the ones listed in your `TARGET_REPOS` variable).
-6.  Under **Permissions** → **Repository permissions**, set:
+1.  Go to **https://github.com/settings/personal-access-tokens/new** to create a new fine-grained token.
+2.  Give it a **Token name** (e.g., `pr_retry_bot`).
+3.  Set an **Expiration** (e.g., 90 days or 1 year max).
+4.  Under **Repository access**, select **"Only select repositories"** and choose the repositories you want to monitor (the ones listed in your `TARGET_REPOS` variable).
+5.  Under **Permissions** → **Repository permissions**, set:
     -   **Actions**: Read and write ✅ (Required to re-run workflows)
     -   **Pull requests**: Read ✅ (Required to list and check PR status)
     -   **Metadata**: Read ✅ (Automatically included)
-7.  Click **"Generate token"** and copy the generated token.
+6.  Click **"Generate token"** and copy the generated token.
 
 ### 2. 🔒 Add Secret to This Repository
 
