@@ -14,13 +14,16 @@ Automated bot to periodically check and retry failed PR checks in target reposit
 
 This token allows the script to read your PRs and trigger re-runs on your behalf.
 
-1.  Go to **GitHub Settings** → **Developer settings** → **Personal access tokens** → **Tokens (classic)**.
-2.  Click **"Generate new token (classic)"**.
-3.  Give it a **Note** (e.g., `pr_retry_bot`).
-4.  Set an **Expiration** (e.g., 90 days).
-5.  Select scopes:
-    -   ✅ `repo` (Required to read PR/action status and trigger action re-runs)
-6.  Click **"Generate token"** and copy the generated token.
+1.  Go to **GitHub Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens**.
+2.  Click **"Generate new token"**.
+3.  Give it a **Token name** (e.g., `pr_retry_bot`).
+4.  Set an **Expiration** (e.g., 90 days or 1 year max).
+5.  Under **Repository access**, select **"Only select repositories"** and choose the repositories you want to monitor (the ones listed in your `TARGET_REPOS` variable).
+6.  Under **Permissions** → **Repository permissions**, set:
+    -   **Actions**: Read and write ✅ (Required to re-run workflows)
+    -   **Pull requests**: Read ✅ (Required to list and check PR status)
+    -   **Metadata**: Read ✅ (Automatically included)
+7.  Click **"Generate token"** and copy the generated token.
 
 ### 2. 🔒 Add Secret to This Repository
 
@@ -49,6 +52,7 @@ These variables control the bot's behavior.
 -   **Value**: JSON array of repositories to monitor (e.g., `["openthread/ot-br-posix", "openthread/openthread"]`)
 -   **Purpose**: Specifies which repositories to check for failed PRs
 -   **Note**: This variable is required for the workflow to run
+-   **Important**: If using a fine-grained token, make sure these repositories are included in the token's repository access
 
 **`ENABLE_SCHEDULED_RETRY`**
 -   **Value**: `true` (to enable) or `false` (to disable)
