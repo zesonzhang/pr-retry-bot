@@ -77,11 +77,11 @@ jobs:
             "Created: \(.createdAt)\n" +
             "Updated: \(.updatedAt)\n" +
             "Status Checks: \(
-              if (.statusCheckRollup // []) | length == 0 then
+              if ((.statusCheckRollup // []) | length) == 0 then
                 "No checks configured"
               else
-                .statusCheckRollup | group_by(.state) | 
-                map("\(.length) \(.[0].state)") | join(", ")
+                (.statusCheckRollup | group_by(.state) | 
+                map("\(. | length) \(.[0].state)") | join(", "))
               end
             )\n"'
       
