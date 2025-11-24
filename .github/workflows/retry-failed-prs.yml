@@ -123,33 +123,32 @@ jobs:
             echo "   Title: $pr_title"
             echo "   SHA: $pr_sha"
 
-            # Find the failed Run ID for this PR + SHA
-            run_info=$(gh run list --repo "$TARGET_REPO" --head-sha "$pr_sha" --status failure --limit 1 --json databaseId,workflowName -q '.[0] | select(. != null) | "\(.databaseId)|\(.workflowName)"' 2>/dev/null || true)
+            # Find all failed Run IDs for this PR + SHA
+            run_infos=$(gh run list --repo "$TARGET_REPO" --commit "$pr_sha" --status failure --json databaseId,workflowName -q '.[] | "\(.databaseId)|\(.workflowName)"' 2>/dev/null || true)
 
-            if [ -n "$run_info" ] && [ "$run_info" != "null" ]; then
-              run_db_id=$(echo "$run_info" | cut -d'|' -f1)
-              workflow_name=$(echo "$run_info" | cut -d'|' -f2-)
-              
-              if [ -n "$run_db_id" ] && [ "$run_db_id" != "null" ]; then
-                echo "   Found failed workflow: $workflow_name (Run ID: $run_db_id)"
-                echo "   🔄 Attempting to re-run failed jobs..."
-                
-                # Trigger retry (only failed jobs)
-                set +e
-                gh run rerun "$run_db_id" --failed --repo "$TARGET_REPO" 2>&1
-                retry_result=$?
-                set -e
-                
-                if [ $retry_result -eq 0 ]; then
-                  echo "   ✅ Successfully triggered retry for Run ID $run_db_id"
+            if [ -n "$run_infos" ]; then
+              echo "$run_infos" | while IFS='|' read -r run_db_id workflow_name; do
+                if [ -n "$run_db_id" ] && [ "$run_db_id" != "null" ]; then
+                  echo "   Found failed workflow: $workflow_name (Run ID: $run_db_id)"
+                  echo "   🔄 Attempting to re-run failed jobs..."
+                  
+                  # Trigger retry (only failed jobs)
+                  set +e
+                  gh run rerun "$run_db_id" --failed --repo "$TARGET_REPO" 2>&1
+                  retry_result=$?
+                  set -e
+                  
+                  if [ $retry_result -eq 0 ]; then
+                    echo "   ✅ Successfully triggered retry for Run ID $run_db_id"
+                  else
+                    echo "   ❌ Failed to trigger retry for Run ID $run_db_id (exit code: $retry_result)"
+                  fi
                 else
-                  echo "   ❌ Failed to trigger retry for Run ID $run_db_id (exit code: $retry_result)"
+                  echo "   ⚠️  Could not extract valid run ID"
                 fi
-              else
-                echo "   ⚠️  Could not extract valid run ID"
-              fi
+              done
             else
-              echo "   ⚠️  Could not find a specific failed run to retry"
+              echo "   ⚠️  Could not find any specific failed runs to retry"
             fi
             echo ""
           done < /tmp/failed_prs.txt

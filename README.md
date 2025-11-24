@@ -17,8 +17,8 @@ This token allows the script to read your PRs and trigger re-runs on your behalf
 1.  Go to **https://github.com/settings/personal-access-tokens/new** to create a new fine-grained token.
 2.  Give it a **Token name** (e.g., `pr_retry_bot`).
 3.  Set an **Expiration** (e.g., 90 days).
-4.  Under **Repository access**, select the repositories you want to monitor.
-5.  Under **Permissions** → **Repository permissions**, set:
+4.  Under **Repository access**, select **"Only select repositories"** and choose the repositories you want to monitor (the ones listed in your `TARGET_REPOS` variable).
+5.  Under **Permissions** → **Repository permissions**, click "Add permissions" to set:
     -   **Actions**: Read and write ✅ (Required to re-run workflows)
     -   **Pull requests**: Read ✅ (Required to list and check PR status)
     -   **Metadata**: Read ✅ (Automatically included)
@@ -103,8 +103,8 @@ To monitor different repositories, update the `TARGET_REPOS` repository variable
 2.  It first checks if the run was manual OR if the `ENABLE_SCHEDULED_RETRY` variable is set to `true`. If neither is true, the job is skipped.
 3.  It uses the `gh` CLI (authenticated with `MY_PAT`) to query the `TARGET_REPO` for open PRs by `MY_USERNAME`.
 4.  It filters this list down to only PRs that have failed status checks.
-5.  For each failed PR, it finds the corresponding failed workflow `run_id`.
-6.  It then triggers a **re-run of only the failed jobs** for that `run_id`.
+5.  For each failed PR, it finds all corresponding failed workflow runs.
+6.  It then triggers a **re-run of only the failed jobs** for each of those runs, ensuring all failures are addressed.
 7.  All actions are logged in the workflow run.
 
 ## License
