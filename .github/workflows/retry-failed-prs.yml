@@ -124,7 +124,7 @@ jobs:
             echo "   SHA: $pr_sha"
 
             # Find all failed Run IDs for this PR + SHA
-            run_infos=$(gh run list --repo "$TARGET_REPO" --commit "$pr_sha" --status failure --json databaseId,workflowName -q '.[] | "\(.databaseId)|\(.workflowName)"' 2>/dev/null || true)
+            run_infos="$(gh run list --repo "$TARGET_REPO" --commit "$pr_sha" --status failure --json databaseId,workflowName -q '.[] | "\(.databaseId)|\(.workflowName)"' 2>/dev/null || true)"
 
             if [ -n "$run_infos" ]; then
               echo "$run_infos" | while IFS='|' read -r run_db_id workflow_name; do
