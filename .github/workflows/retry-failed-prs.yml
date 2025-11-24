@@ -95,7 +95,7 @@ jobs:
           echo "🔍 Looking for PRs with failed checks to retry..."
           echo ""
           
-          failed_prs=$(cat /tmp/all_prs.json | jq -r '.[] | select(.statusCheckRollup[]? | .state == "FAILURE") | "\(.number)|\(.headRefOid)|\(.title)"' || true)
+          failed_prs=$(cat /tmp/all_prs.json | jq -r '.[] | . as $pr | .statusCheckRollup[] | select(.conclusion == "FAILURE") | "\($pr.number)|\($pr.headRefOid)|\($pr.title)"' | sort -u || true)
           
           if [ -z "$failed_prs" ]; then
             echo "✅ No PRs with failed checks found"
