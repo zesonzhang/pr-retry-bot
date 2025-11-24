@@ -143,13 +143,16 @@ jobs:
                     echo "   ✅ Successfully triggered retry for Run ID $run_db_id"
                   else
                     echo "   ❌ Failed to trigger retry for Run ID $run_db_id (exit code: $retry_result)"
+                    exit 1
                   fi
                 else
                   echo "   ⚠️  Could not extract valid run ID"
+                  exit 1
                 fi
               done
             else
               echo "   ⚠️  Could not find any specific failed runs to retry"
+              exit 1
             fi
             echo ""
           done < /tmp/failed_prs.txt
